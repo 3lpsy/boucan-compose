@@ -1,0 +1,5 @@
+.env/*.env
+!.env/.gitkeep
+!.env/*.example
+!.env/*.dev.env
+!.env/*.test.env
