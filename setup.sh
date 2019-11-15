@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e; 
+
 get_script_dir () {
      SOURCE="${BASH_SOURCE[0]}"
      while [ -h "$SOURCE" ]; do

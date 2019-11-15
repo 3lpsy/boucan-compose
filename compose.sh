@@ -41,7 +41,7 @@ get_script_dir () {
 _COMPOSE_DIR="$(get_script_dir)"
 
 if [ ! -f "${_COMPOSE_DIR}/compose.env" ]; then
-    echo "No source file found at ${_COMPOSE_DIR}/target.env";
+    echo "No source file found at ${_COMPOSE_DIR}/comoose.env";
     echo "Try running: ./setup.sh";
     echo "Quiting."
     exit 1;
