@@ -45,7 +45,7 @@ if __name__ == "__main__":
         help=f"scopes (default: {NODE_SCOPES})",
     )
     parser.add_argument(
-        "-d", "--days", action="store", default=30, type=str, help="days valid for"
+        "-d", "--days", action="store", default=30, type=int, help="days valid for"
     )
     parser.add_argument(
         "-n",
