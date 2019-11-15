@@ -32,12 +32,14 @@ services:
     image: 3lpsy/boucan:latest
     networks:
       boucanpub:
-    command: http-server -l 0.0.0.0 -p 80 --log-level info --log-format short --no-ssl-verify --enable-ssl --ssl-port 443 --ssl-listen 0.0.0.0
+    command: http-server -l 0.0.0.0 -p 80 --log-level info --log-format short --no-ssl-verify --enable-ssl --ssl-port 443 --ssl-listen 0.0.0.0 --ssl-key-path  /etc/letsencrypt/live/boucan.proxy.docker/privkey.pem --ssl-cert-path /etc/letsencrypt/live/boucan.proxy.docker/fullchain.pem
     ports:
       - "0.0.0.0:80:80/tcp"
       - "0.0.0.0:443:443/tcp"
     env_file:
       - ${COMPOSE_ENV_DIR}/http.env
+    volumes:
+      - /etc/letsencrypt/live/bountydns.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     restart: on-failure:2
     depends_on:
       - boucan
