@@ -2,14 +2,14 @@ version: "3.3"
 services:
   boucan:
     build:
-      context: ./../../
-      dockerfile: ./infra/docker/boucan.dockerfile
+      context: ${BOUCAN_DIR}/boucanpy
+      dockerfile: Dockerfile
     image: 3lpsy/boucan:latest
     networks:
       boucanpub:
-    command: api-server --no-envs --db-setup -l 0.0.0.0 --db-seed-env
+    command: api-server -l 0.0.0.0 --db-setup --db-seed-env --log-level info --log-format short --second-log-level warning --force-exit
     env_file:
-      - ${COMPOSE_ENV_DIR}/api.prod.env
+      - ${COMPOSE_ENV_DIR}/api.env
     depends_on:
       - db
       - broadcast
@@ -17,72 +17,64 @@ services:
     image: 3lpsy/boucan:latest
     networks:
       boucanpub:
-    command: dns-server -l 0.0.0.0 -p 53 --refresh-ttl 60 --no-ssl-verify
+    command: dns-server -l 0.0.0.0 -p 53 --log-level info --log-format short --no-ssl-verify
+    ports:
+      - "0.0.0.0:53:53/udp"
+      - "0.0.0.0:53:53/tcp"
     env_file:
-      - ${COMPOSE_ENV_DIR}/dns.prod.env
+      - ${COMPOSE_ENV_DIR}/dns.env
     restart: on-failure:2
     depends_on:
       - boucan
       - broadcast
-      - proxy
-    ports:
-      - "0.0.0.0:53:53/udp"
-      - "0.0.0.0:53:53/tcp"
+      - web
   http:
     image: 3lpsy/boucan:latest
     networks:
       boucanpub:
-    command: dns-server -l 0.0.0.0 -p 80 --no-ssl-verify
+    command: http-server -l 0.0.0.0 -p 80 --log-level info --log-format short --no-ssl-verify --enable-ssl --ssl-port 443 --ssl-listen 0.0.0.0
+    ports:
+      - "0.0.0.0:80:80/tcp"
+      - "0.0.0.0:443:443/tcp"
     env_file:
-      - ${COMPOSE_ENV_DIR}/dns.prod.env
+      - ${COMPOSE_ENV_DIR}/http.env
     restart: on-failure:2
     depends_on:
       - boucan
       - broadcast
-      - proxy
-    ports:
-      - "0.0.0.0:80:80/tcp"
-  webui:
+      - web
+  web:
     build:
-      context: ./../../
-      dockerfile: ./infra/docker/webui.dockerfile
-    image: 3lpsy/boucan-webui:latest
-    networks:
-      boucanpub:
-  proxy:
-    build:
-      context: ./../proxy
-      dockerfile: ./../docker/proxy.dockerfile
-    image: 3lpsy/boucan-proxy:latest
-    env_file:
-      - ${COMPOSE_ENV_DIR}/proxy.prod.env
+      context: ${BOUCAN_DIR}/boucan-web
+      dockerfile: Dockerfile
+    image: 3lpsy/boucan-web:latest
     ports:
       - "0.0.0.0:8080:8080"
       - "0.0.0.0:8443:8443"
+    env_file:
+      - ${COMPOSE_ENV_DIR}/web.env
     networks:
       boucanpub:
-    volumes:
-      - ${TLS_HOST_DIR}/boucan.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     depends_on:
-      - webui
       - boucan
   broadcast:
     build:
-      context: ./../broadcast
-      dockerfile: ./../docker/broadcast.dockerfile
+      context: ${COMPOSE_DIR}/broadcast
+      dockerfile: Dockerfile
     image: 3lpsy/boucan-broadcast:latest
+    ports:
+      - "127.0.0.1:6379:6379"
     env_file:
-      - ${COMPOSE_ENV_DIR}/broadcast.prod.env
+      - ${COMPOSE_ENV_DIR}/broadcast.env
     networks:
       boucanpub:
     restart: on-failure:5
   db:
     image: postgres:latest
     env_file:
-      - ${COMPOSE_ENV_DIR}/db.prod.env
+      - ${COMPOSE_ENV_DIR}/db.env
     networks:
       boucanpub:
-
 networks:
   boucanpub:
     # Use a custom driver
@@ -92,4 +84,4 @@ networks:
       config:
         - subnet: 172.28.20.0/24
     driver_opts:
-      com.docker.network.bridge.name: bountdnspub0
+      com.docker.network.bridge.name: boucanpub0

@@ -63,6 +63,18 @@ if [ ! -f "${COMPOSE_DIR}/docker-compose.${env}.yml" ]; then
      exit 1;
 fi
 
+if [[ "$env" == "prod" ]]; then 
+     if [[ -d "/etc/boucan" && -d "/etc/boucan/env" ]]; then 
+          export COMPOSE_ENV_DIR="/etc/boucan/env";
+     elif [[ -d "${COMPOSE_DIR}/.env" ]]; then 
+          export COMPOSE_ENV_DIR="${COMPOSE_DIR}/.env"
+     else
+          echo "No environment directory found at /etc/boucan/env or ${COMPOSE_DIR}/.env for production.";
+          echo "Quiting...";
+          exit 1
+     fi
+fi
+
 compose="$compose -f docker-compose.${env}.yml"
 
 export COMPOSE_ENV="$env";
