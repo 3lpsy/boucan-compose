@@ -1,12 +1,12 @@
 version: "3.3"
 services:
-  bountydns:
+  boucan:
     build:
       context: ./../../
-      dockerfile: ./infra/docker/bountydns.dockerfile
-    image: 3lpsy/bountydns:latest
+      dockerfile: ./infra/docker/boucan.dockerfile
+    image: 3lpsy/boucan:latest
     networks:
-      bountydnspub:
+      boucanpub:
     command: api-server --no-envs --db-setup -l 0.0.0.0 --db-seed-env
     env_file:
       - ${COMPOSE_ENV_DIR}/api.prod.env
@@ -14,30 +14,30 @@ services:
       - db
       - broadcast
   dns:
-    image: 3lpsy/bountydns:latest
+    image: 3lpsy/boucan:latest
     networks:
-      bountydnspub:
+      boucanpub:
     command: dns-server -l 0.0.0.0 -p 53 --refresh-ttl 60 --no-ssl-verify
     env_file:
       - ${COMPOSE_ENV_DIR}/dns.prod.env
     restart: on-failure:2
     depends_on:
-      - bountydns
+      - boucan
       - broadcast
       - proxy
     ports:
       - "0.0.0.0:53:53/udp"
       - "0.0.0.0:53:53/tcp"
   http:
-    image: 3lpsy/bountydns:latest
+    image: 3lpsy/boucan:latest
     networks:
-      bountydnspub:
+      boucanpub:
     command: dns-server -l 0.0.0.0 -p 80 --no-ssl-verify
     env_file:
       - ${COMPOSE_ENV_DIR}/dns.prod.env
     restart: on-failure:2
     depends_on:
-      - bountydns
+      - boucan
       - broadcast
       - proxy
     ports:
@@ -46,45 +46,45 @@ services:
     build:
       context: ./../../
       dockerfile: ./infra/docker/webui.dockerfile
-    image: 3lpsy/bountydns-webui:latest
+    image: 3lpsy/boucan-webui:latest
     networks:
-      bountydnspub:
+      boucanpub:
   proxy:
     build:
       context: ./../proxy
       dockerfile: ./../docker/proxy.dockerfile
-    image: 3lpsy/bountydns-proxy:latest
+    image: 3lpsy/boucan-proxy:latest
     env_file:
       - ${COMPOSE_ENV_DIR}/proxy.prod.env
     ports:
       - "0.0.0.0:8080:8080"
       - "0.0.0.0:8443:8443"
     networks:
-      bountydnspub:
+      boucanpub:
     volumes:
-      - ${TLS_HOST_DIR}/bountydns.proxy.docker:/etc/letsencrypt/live/bountydns.proxy.docker
+      - ${TLS_HOST_DIR}/boucan.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     depends_on:
       - webui
-      - bountydns
+      - boucan
   broadcast:
     build:
       context: ./../broadcast
       dockerfile: ./../docker/broadcast.dockerfile
-    image: 3lpsy/bountydns-broadcast:latest
+    image: 3lpsy/boucan-broadcast:latest
     env_file:
       - ${COMPOSE_ENV_DIR}/broadcast.prod.env
     networks:
-      bountydnspub:
+      boucanpub:
     restart: on-failure:5
   db:
     image: postgres:latest
     env_file:
       - ${COMPOSE_ENV_DIR}/db.prod.env
     networks:
-      bountydnspub:
+      boucanpub:
 
 networks:
-  bountydnspub:
+  boucanpub:
     # Use a custom driver
     driver: bridge
     ipam:

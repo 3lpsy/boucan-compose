@@ -1,0 +1,155 @@
+version: "3.3"
+services:
+  boucan:
+    build:
+      context: ${BOUCAN_DIR}/boucanpy
+      dockerfile: Dockerfile
+    image: 3lpsy/boucan:latest
+    networks:
+      boucanpub:
+    command: api-server --debug --reload --no-envs -l 0.0.0.0 --db-seed --db-setup --db-seed-env --log-level info --log-format short --second-log-level warning --force-exit
+    environment:
+      - API_ENV=dev
+      - API_SECRET_KEY=helloworld
+      - API_SERVER_NAME=boutydns
+      - API_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
+      - API_REPO_DEBUG=0
+      - DB_DRIVER=postgresql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=postgres
+      - BROADCAST_ENABLED=1
+      - BROADCAST_DRIVER=redis
+      - BROADCAST_HOST=broadcast
+      - BROADCAST_PORT=6379
+      - BROADCAST_PASSWORD=redis
+      - BROADCAST_PATH=0
+      - SEED_USER_0_EMAIL=jim@jim.jim
+      - SEED_USER_0_PASSWORD=password123
+      - SEED_USER_0_SUPERUSER=1
+      - SEED_DNS_SERVER_0_NAME=myfirstdnsserver
+      - SEED_ZONE_0_IP=127.0.0.1
+      - SEED_ZONE_0_DOMAIN=example.com
+    volumes:
+      - ${BOUCAN_DIR}/boucanpy/boucanpy:/boucanpy/boucanpy
+      - ${BOUCAN_DIR}/boucanpy/bdnsctl.py:/boucanpy/bdnsctl.py
+      - ${BOUCAN_DIR}/boucanpy/requirements.txt:/boucanpy/requirements.txt
+    depends_on:
+      - db
+      - broadcast
+  dns:
+    image: 3lpsy/boucan:latest
+    networks:
+      boucanpub:
+    command: dns-server -l 0.0.0.0 -p 53 --log-level info --log-format short --no-ssl-verify
+    ports:
+      - "127.0.0.1:5300:53/udp"
+      - "127.0.0.1:5300:53/tcp"
+    environment:
+      - API_URL=http://web:8080
+      - API_TOKEN=${DNS_API_TOKEN}
+    volumes:
+      - ${BOUCAN_DIR}/boucanpy/boucanpy:/boucanpy/boucanpy
+      - ${BOUCAN_DIR}/boucanpy/bdnsctl.py:/boucanpy/bdnsctl.py
+      - ${BOUCAN_DIR}/boucanpy/requirements.txt:/boucanpy/requirements.txt
+    restart: on-failure:2
+    depends_on:
+      - boucan
+      - broadcast
+      - web
+  http:
+    image: 3lpsy/boucan:latest
+    networks:
+      boucanpub:
+    command: http-server -l 0.0.0.0 -p 80 --log-level info --log-format short --no-ssl-verify --enable-ssl --ssl-port 443 --ssl-listen 0.0.0.0
+    ports:
+      - "127.0.0.1:9080:80/tcp"
+      - "127.0.0.1:9443:443/tcp"
+    environment:
+      - API_URL=http://web:8080
+      - API_TOKEN=${HTTP_API_TOKEN}
+    volumes:
+      - ${BOUCAN_DIR}/boucanpy/boucanpy:/boucanpy/boucanpy
+      - ${BOUCAN_DIR}/boucanpy/bdnsctl.py:/boucanpy/bdnsctl.py
+      - ${BOUCAN_DIR}/boucanpy/requirements.txt:/boucanpy/requirements.txt
+    restart: on-failure:2
+    depends_on:
+      - boucan
+      - broadcast
+      - web
+  web:
+    build:
+      context: ${BOUCAN_DIR}/boucan-web
+      dockerfile: Dockerfile
+      args:
+        VUE_APP_API_BASE: http://localhost:8080
+        VUE_APP_API_URL: http://localhost:8080/api/v1
+        VUE_APP_BROADCAST_BASE: http://localhost:8080
+        VUE_APP_BROADCAST_URL: http://localhost:8080/broadcast
+    image: 3lpsy/boucan-web:latest
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8443:8443"
+    environment:
+      - SSL_ENABLED=0
+      - INSECURE_LISTEN_PORT=8080
+      - API_BACKEND_PROTO=http
+      - API_BACKEND_HOST=boucan
+      - API_BACKEND_PORT=8080
+      - DEBUG_CONF=0
+    volumes:
+      - ${BOUCAN_DIR}/boucan-web/dist:/var/www/app/webui
+      - ${BOUCAN_DIR}/boucan-web/landing:/var/www/app/landing
+    networks:
+      boucanpub:
+    depends_on:
+      - boucan
+  broadcast:
+    build:
+      context: ${COMPOSE_DIR}/broadcast
+      dockerfile: Dockerfile
+    image: 3lpsy/boucan-broadcast:latest
+    ports:
+      - "127.0.0.1:6379:6379"
+    environment:
+      - REDIS_PASSWORD=redis
+      - REDIS_MASTER_HOST=redis
+    networks:
+      boucanpub:
+    restart: on-failure:5
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=postgrs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      boucanpub:
+  dbui:
+    image: dpage/pgadmin4
+    ports:
+      - "5000:5000"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin
+      - PGADMIN_DEFAULT_PASSWORD=password
+      - PGADMIN_LISTEN_PORT=5000
+    networks:
+      boucanpub:
+    volumes:
+      - ${COMPOSE_DIR}/dbui/dev.servers.json:/pgadmin4/servers.json
+      - ${COMPOSE_DIR}/dbui/dev.pass.txt:/dbpass.txt
+    logging:
+      driver: none
+
+networks:
+  boucanpub:
+    # Use a custom driver
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.20.0/24
+    driver_opts:
+      com.docker.network.bridge.name: boucanpub0

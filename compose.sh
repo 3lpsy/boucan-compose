@@ -1,9 +1,53 @@
 #!/bin/bash
-
 set -e;
 
-export COMPOSE_PROJECT_NAME=bountydns
-compose="docker-compose"
+compose="docker-compose";
+
+function print_usage() {
+     echo "BoucanCompose: A Compose Project for Boucan"
+     echo 'Usage:'
+     echo '    $ ./compose.sh [env] [compose options]'
+     echo ''
+     echo 'Examples:'
+     echo '    $ ./compose.sh dev build --no-cache'
+     echo '    $ ./compose.sh dev down -v '
+     echo '    $ ./compose.sh dev up'
+     echo '    $ ./compose.sh dev fresh'
+     exit 0;
+}
+
+if [ "$1" == "help" ]; then 
+     print_usage;
+     exit 0;
+elif [ "$1" == "--help" ]; then 
+     print_usage;
+     exit 0;
+elif [ "$1" == "-h" ]; then 
+     print_usage;
+     exit 0;
+fi
+
+get_script_dir () {
+     SOURCE="${BASH_SOURCE[0]}"
+     while [ -h "$SOURCE" ]; do
+          DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+          SOURCE="$( readlink "$SOURCE" )"
+          [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+     done
+     $( cd -P "$( dirname "$SOURCE" )" )
+     pwd
+}
+
+_COMPOSE_DIR="$(get_script_dir)"
+
+if [ ! -f "${_COMPOSE_DIR}/compose.env" ]; then
+    echo "No source file found at ${_COMPOSE_DIR}/target.env";
+    echo "Try running: ./setup.sh";
+    echo "Quiting."
+    exit 1;
+fi
+
+source "${_COMPOSE_DIR}/compose.env";
 
 env="${1}"
 
@@ -11,30 +55,20 @@ shift ;
 
 if [[ ${#env} -lt 3 ]]; then
     echo "please pass the environment type: compose.sh [env] [args]"
-elif [[ "${env}" == "dev" ]]; then
-    export COMPOSE_ENV_DIR="$PWD/.env"
-    export COMPOSE_PATH_SEPARATOR=:
-    export COMPOSE_FILE=docker-compose.dev.build.yml:docker-compose.dev.ports.yml:docker-compose.dev.volumes.yml
-elif [[ "${env}" == "prod" ]]; then
-    if [[ -d "/etc/bountydns/env" ]]; then
-        export COMPOSE_ENV_DIR="/etc/bountydns/env"
-    else
-        export COMPOSE_ENV_DIR="$PWD/.env"
-    fi
-
-    if [[ -d "/etc/letsencrypt/live" ]]; then
-        export TLS_HOST_DIR="/etc/letsencrypt/live";
-    else
-        export TLS_HOST_DIR="$PWD/.tls";
-    fi 
-    if [[ ! -d ${TLS_HOST_DIR}/bountydns.proxy.docker ]]; then 
-        mkdir ${TLS_HOST_DIR}/bountydns.proxy.docker;
-    fi
-    compose="$compose -f docker-compose.prod.yml"
-else
-    echo "please pass a valid environment type: compose.sh [env] [args]"
 fi
 
-cd $PWD/infra/compose
+if [ ! -f "${COMPOSE_DIR}/docker-compose.${env}.yml" ]; then
+     echo "No compose file found: ${COMPOSE_DIR}/docker-compose.${env}.yml"
+     echo "Please create the appropriate compose file or use a different environment."
+     exit 1;
+fi
 
-$compose $@;
+compose="$compose -f docker-compose.${env}.yml"
+
+export COMPOSE_ENV="$env";
+
+if [ "$1" == "fresh" ]; then 
+     $compose down -v && $compose up;
+else
+     $compose $@;
+fi
