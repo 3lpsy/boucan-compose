@@ -55,6 +55,8 @@ services:
       - "0.0.0.0:8443:8443"
     env_file:
       - ${COMPOSE_ENV_DIR}/web.env
+    volumes:
+      - /etc/letsencrypt/live/bountydns.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     networks:
       boucanpub:
     depends_on:
