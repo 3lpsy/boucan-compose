@@ -39,7 +39,7 @@ services:
     env_file:
       - ${COMPOSE_ENV_DIR}/http.env
     volumes:
-      - /etc/letsencrypt/live/bountydns.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
+      - /etc/letsencrypt/live/boucan.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     restart: on-failure:2
     depends_on:
       - boucan
@@ -56,7 +56,7 @@ services:
     env_file:
       - ${COMPOSE_ENV_DIR}/web.env
     volumes:
-      - /etc/letsencrypt/live/bountydns.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
+      - /etc/letsencrypt/live/boucan.proxy.docker:/etc/letsencrypt/live/boucan.proxy.docker
     networks:
       boucanpub:
     depends_on:
