@@ -18,7 +18,6 @@ NODE_SCOPES = "profile dns-request:create dns-request:list http-request:create h
 
 def create_token(*, secret: str, data: dict, expire: datetime, hours: int = 24):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=hours)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, secret, algorithm="HS256")
     return str(encoded_jwt.decode())
@@ -61,27 +60,25 @@ if __name__ == "__main__":
         help="prints the commands to export HTTP_API_SECRET and DNS_API_SECRET",
     )
     args = parser.parse_args()
+    data = {"sub": args.user_id}
     scopes = " ".join(args.scope) if len(args.scope or []) > 0 else NODE_SCOPES
-    server_name = args.server_name or uuid.uuid4().hex
+    data["scopes"] = scopes
+    server_name = args.server_name
+    if server_name:
+        data["dns_server_name"] = server_name
+        data["http_server_name"] = server_name
+
     expires_delta = timedelta(days=args.days)
     expires_at = datetime.utcnow() + expires_delta
     secret = args.secret or environ.get("API_SECRET")
+
     if not secret:
         print(
             "No secret provided using -S/--secret or API_SECRET. Please provide one that matches the server and try again"
         )
         sys.exit(1)
 
-    token = create_token(
-        secret=secret,
-        data={
-            "sub": args.user_id,
-            "scopes": scopes,
-            "dns_server_name": server_name,
-            "http_server_name": server_name,
-        },
-        expire=expires_at,
-    )
+    token = create_token(secret=secret, data=data, expire=expires_at,)
     if args.exportformat:
         print(f"export HTTP_API_TOKEN={str(token)}")
         print(f"export DNS_API_TOKEN={str(token)}")

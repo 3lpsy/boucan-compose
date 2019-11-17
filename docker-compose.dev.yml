@@ -7,12 +7,13 @@ services:
     image: 3lpsy/boucan:latest
     networks:
       boucanpub:
-    command: api-server --debug --reload --no-envs -l 0.0.0.0 --db-seed --db-setup --db-seed-env --log-level info --log-format short --second-log-level warning --force-exit
+    # add --db-seed back for more fake data
+    command: api-server --debug --reload --no-envs -l 0.0.0.0 --db-setup --db-seed-env --log-level info --log-format short --second-log-level warning --force-exit
     environment:
       - API_ENV=dev
       - API_SECRET_KEY=helloworld
-      - API_SERVER_NAME=boutydns
-      - API_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
+      - API_SERVER_NAME=boucan
+      - API_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080,http://boucan.dev:8080
       - API_REPO_DEBUG=0
       - DB_DRIVER=postgresql
       - DB_HOST=db
@@ -29,9 +30,9 @@ services:
       - SEED_USER_0_EMAIL=jim@jim.jim
       - SEED_USER_0_PASSWORD=password123
       - SEED_USER_0_SUPERUSER=1
-      - SEED_DNS_SERVER_0_NAME=myfirstdnsserver
+      - SEED_DNS_SERVER_0_NAME=mynode
       - SEED_ZONE_0_IP=127.0.0.1
-      - SEED_ZONE_0_DOMAIN=example.com
+      - SEED_ZONE_0_DOMAIN=boucan.dev
     volumes:
       - ${BOUCAN_DIR}/boucanpy/boucanpy:/boucanpy/boucanpy
       - ${BOUCAN_DIR}/boucanpy/bdnsctl.py:/boucanpy/bdnsctl.py
