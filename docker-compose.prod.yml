@@ -77,6 +77,8 @@ services:
     image: postgres:latest
     env_file:
       - ${COMPOSE_ENV_DIR}/db.env
+    volumes:
+      - /etc/boucan/data:/var/lib/postgresql/data
     networks:
       boucanpub:
 networks:
